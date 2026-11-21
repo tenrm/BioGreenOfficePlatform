@@ -11,6 +11,8 @@
 *{box-sizing:border-box}
 body{margin:0;font-family:"IBM Plex Sans Thai",system-ui,sans-serif;color:var(--ink);background:var(--bg);font-size:15px;line-height:1.55}
 header{background:linear-gradient(120deg,#164f34,#1f7a4d 60%,#3aa873);color:#fff;padding:18px 24px 0}
+.evtop{float:right;background:#fff;color:var(--g);border-radius:10px;padding:7px 14px;font-weight:600;text-decoration:none;font-size:14px;margin-top:2px}
+.evtop:hover{background:var(--gl)}
 header h1{margin:0;font-size:22px;font-weight:700;letter-spacing:.2px}
 header p{margin:2px 0 12px;opacity:.9;font-size:13.5px}
 nav{display:flex;gap:4px;flex-wrap:wrap}
@@ -35,9 +37,9 @@ h3{font-size:16px;margin:0 0 8px}
 .lv{font-size:20px;font-weight:700;padding:6px 14px;border-radius:10px;display:inline-block}
 select,input,textarea{font:inherit;font-size:14px;border:1px solid var(--line);border-radius:8px;padding:6px 8px;background:#fff;color:var(--ink)}
 textarea{width:100%;min-height:54px}
-button.btn{font:inherit;font-size:14px;border:1px solid var(--g);background:var(--g);color:#fff;border-radius:9px;padding:7px 14px;cursor:pointer}
-button.btn.ghost{background:#fff;color:var(--g)}
-button.btn.sm{padding:3px 10px;font-size:13px}
+a.btn,button.btn{display:inline-block;text-decoration:none;font:inherit;font-size:14px;border:1px solid var(--g);background:var(--g);color:#fff;border-radius:9px;padding:7px 14px;cursor:pointer}
+a.btn.ghost,button.btn.ghost{background:#fff;color:var(--g)}
+a.btn.sm,button.btn.sm{padding:3px 10px;font-size:13px}
 button.btn:disabled{opacity:.5;cursor:default}
 .cat{margin-bottom:18px}
 .cathead{display:flex;justify-content:space-between;align-items:center;background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 14px;cursor:pointer}
@@ -72,6 +74,7 @@ footer{max-width:1180px;margin:0 auto;padding:10px 20px 40px;color:var(--mut);fo
 <body>
 <header>
   <h1>BioGreenOfficePlatform</h1>
+  <a id="evbtn" class="evtop" target="_blank" rel="noopener">📁 แฟ้มหลักฐาน (Google Drive)</a>
   <p>แพลตฟอร์มเตรียมรับรองสำนักงานสีเขียว (Green Office) ภาควิชาชีววิทยา · เกณฑ์ปี 2569 (6 หมวด 22 ประเด็น 63 ตัวชี้วัด) · เชื่อมสู่ Low Carbon / Net Zero</p>
   <nav id="nav"></nav>
 </header>
@@ -244,8 +247,13 @@ const CRIT = [{"id": "1.1.1", "t": "มีบริบทองค์กรแ�
 <script>
 const TABS=[["dash","ภาพรวม"],["crit","เกณฑ์ & ประเมินตนเอง"],["acts","คลังกิจกรรม"],["plan","แผนงาน"],["cf","คาร์บอนฟุตพริ้นท์"],["gaps","ช่องว่างจากรายงานอาคาร"],["wf","Workflow เก็บข้อมูล"],["set","ตั้งค่า / ส่งออก"]];
 const KEY="bgo-v1";
-const blank=()=>({scores:{},checks:{},notes:{},evid:{},owner:{},plan:[],cf:{},ef:{},cfg:{people:55,area:0,th:[90,80,70],baseYear:"",target:5}});
+const EV_ROOT_DEFAULT="https://drive.google.com/drive/folders/14GHw_VPB1RbDkHQ96N7gFZBDeH2LPhWK?usp=drive_link";
+const blank=()=>({scores:{},checks:{},notes:{},evid:{},owner:{},evlink:{},plan:[],cf:{},ef:{},cfg:{people:55,area:0,th:[90,80,70],baseYear:"",target:5,evRoot:EV_ROOT_DEFAULT}});
 let S;try{S=Object.assign(blank(),JSON.parse(localStorage.getItem(KEY)||"{}"))}catch(e){S=blank()}
+S.evlink=S.evlink||{};S.cfg=Object.assign(blank().cfg,S.cfg||{});
+const evRoot=()=>(S.cfg.evRoot||"").trim()||EV_ROOT_DEFAULT;
+const safeUrl=u=>/^https?:\/\//i.test(String(u||"").trim())?String(u).trim():"";
+const evFolderName=id=>"หมวด "+catOf(id)+" / "+id;
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
 let tab=(location.hash||"#dash").slice(1);if(!TABS.find(t=>t[0]===tab))tab="dash";
 const $=(s,r=document)=>r.querySelector(s);
@@ -255,7 +263,7 @@ const issueOf=id=>id.split(".").slice(0,2).join(".");
 const catOf=id=>+id.split(".")[0];
 const EFV=k=>{const d=EF_DEFAULT.find(x=>x.k===k);return S.ef[k]!=null&&S.ef[k]!==""?+S.ef[k]:d.ef};
 
-function nav(){$("#nav").innerHTML=TABS.map(t=>`<button class="${t[0]===tab?"on":""}" onclick="go('${t[0]}')">${t[1]}</button>`).join("")}
+function nav(){const eb=document.getElementById("evbtn");if(eb)eb.href=safeUrl(evRoot())||EV_ROOT_DEFAULT;$("#nav").innerHTML=TABS.map(t=>`<button class="${t[0]===tab?"on":""}" onclick="go('${t[0]}')">${t[1]}</button>`).join("")}
 function go(t,anchor){tab=t;location.hash=t;nav();render();if(anchor)setTimeout(()=>{const el=document.getElementById("ind-"+anchor);if(el){el.classList.add("open");el.scrollIntoView({behavior:"smooth",block:"center"})}},50);else window.scrollTo(0,0)}
 
 function catScore(c){const inds=CRIT.filter(x=>catOf(x.id)===c);const sum=inds.reduce((a,x)=>a+(+S.scores[x.id]||0),0);return {n:inds.length,sum,max:inds.length*4,pct:inds.length?sum/(inds.length*4)*100:0,done:inds.filter(x=>S.scores[x.id]!=null).length}}
@@ -279,6 +287,9 @@ function dash(){
   <div class="card"><h3>ตัวชี้วัดที่ควรเร่ง (ยังไม่ประเมิน หรือ ≤ 1 คะแนน): ${low.length}</h3>
   <div style="max-height:420px;overflow:auto">${low.slice(0,40).map(x=>`<div class="row" style="margin:5px 0;cursor:pointer" onclick="go('crit','${x.id}')"><b class="ok" style="min-width:42px">${x.id}</b><span style="flex:1">${esc(short(x.t))}</span><span class="badge">${S.scores[x.id]??"–"}</span></div>`).join("")}</div></div>
  </div>
+ <div class="card" style="margin-top:14px"><div class="row" style="justify-content:space-between"><h3 style="margin:0">แฟ้มหลักฐานกลาง (Google Drive)</h3><a class="btn sm" style="text-decoration:none" target="_blank" rel="noopener" href="${esc(evRoot())}">📁 เปิดแฟ้มหลักฐาน</a></div>
+ <p class="muted" style="margin:8px 0 4px">เก็บไฟล์หลักฐานทุกชิ้นไว้ในโฟลเดอร์นี้ โครงสร้างแนะนำ: <b>หมวด 1 … หมวด 6</b> → โฟลเดอร์ย่อยตามเลขตัวชี้วัด (เช่น หมวด 1 / 1.1.2) → ตั้งชื่อไฟล์ <b>เลขตัวชี้วัด_ชื่อเอกสาร_ปีเดือน</b> เช่น 1.1.2_นโยบายสิ่งแวดล้อม_2569-12.pdf · ข้อมูลรายเดือนเก็บในโฟลเดอร์ <b>ข้อมูลรายเดือน / ปี-เดือน</b></p>
+ <p class="muted" style="margin:0">ใส่ลิงก์หลักฐานแล้ว ${CRIT.filter(x=>safeUrl(S.evlink[x.id])).length}/63 ตัวชี้วัด · ผู้ใช้ต้องได้รับสิทธิ์เข้าถึงโฟลเดอร์จากเจ้าของไดรฟ์จึงจะเปิดได้</p></div>
  <div class="card" style="margin-top:14px"><h3>เริ่มต้นใช้งาน</h3><ol style="margin:0;padding-left:20px">
  <li>แท็บ <b>เกณฑ์ & ประเมินตนเอง</b> — ติ๊กข้อย่อยที่ทำแล้ว ให้คะแนน 0–4 ระบุสถานะหลักฐานและผู้รับผิดชอบ</li>
  <li>แท็บ <b>คลังกิจกรรม</b> — เลือกกิจกรรม (มีตัวอย่างเฉพาะงานชีววิทยา) แล้วกด “เพิ่มในแผน”</li>
@@ -316,14 +327,17 @@ function indCard(x){
  const acts=ACTS.map((a,i)=>[a,i]).filter(([a])=>a.n.includes(x.id));
  const ev=S.evid[x.id]||"none";const evc={none:"bad",partial:"warn",ready:"ok"}[ev];
  return `<div class="ind" id="ind-${x.id}"><div class="h" onclick="this.parentNode.classList.toggle('open')"><span class="id">${x.id}</span><span class="t">${esc(x.t)}</span>
- ${x.items.length?`<span class="badge">${nk}/${x.items.length} ข้อ</span>`:""}<span class="dot" style="background:${{bad:"#c0392b",warn:"#d69e2e",ok:"#2e9e66"}[evc]}" title="หลักฐาน"></span><b style="min-width:22px;text-align:right">${sc??"–"}</b></div>
+ ${x.items.length?`<span class="badge">${nk}/${x.items.length} ข้อ</span>`:""}${safeUrl(S.evlink[x.id])?`<a href="${esc(safeUrl(S.evlink[x.id]))}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="เปิดหลักฐาน" style="text-decoration:none">📁</a>`:""}<span class="dot" style="background:${{bad:"#c0392b",warn:"#d69e2e",ok:"#2e9e66"}[evc]}" title="หลักฐาน"></span><b style="min-width:22px;text-align:right">${sc??"–"}</b></div>
  <div class="b">
  ${x.items.length?`<div style="margin-bottom:8px"><b>ข้อกำหนด</b>${x.items.map((it,i)=>`<label class="chk"><input type="checkbox" ${ck[i]?"checked":""} onchange="setChk('${x.id}',${i},this.checked)"><span>(${i+1}) ${esc(it)}</span></label>`).join("")}</div>`:""}
  ${x.sc?`<div class="note" style="margin-bottom:8px">${esc(x.sc)}</div>`:""}${x.ev.length?`<div style="margin-bottom:8px"><b>หลักฐานการตรวจประเมิน</b>${x.ev.map(e=>`<div class="ev">${esc(e)}</div>`).join("")}</div>`:""}
  <div class="row" style="margin:8px 0"><b>คะแนน</b><div class="sc">${[0,1,2,3,4].map(v=>`<button class="${sc==v?"on":""}" onclick="setScore('${x.id}',${v})">${v}</button>`).join("")}<button onclick="setScore('${x.id}',null)" title="ล้าง">×</button></div>
  <b style="margin-left:10px">หลักฐาน</b><select onchange="S.evid['${x.id}']=this.value;save();render()"><option value="none" ${ev==="none"?"selected":""}>ยังไม่มี</option><option value="partial" ${ev==="partial"?"selected":""}>มีบางส่วน</option><option value="ready" ${ev==="ready"?"selected":""}>พร้อมแล้ว</option></select>
  <b style="margin-left:10px">ผู้รับผิดชอบ</b><input value="${esc(S.owner[x.id]||"")}" placeholder="${esc(TEAM_BY_ISSUE[issueOf(x.id)]||"")}" onchange="S.owner['${x.id}']=this.value;save()"></div>
- <textarea placeholder="บันทึก / ที่เก็บไฟล์หลักฐาน (เช่น ลิงก์โฟลเดอร์)" onchange="S.notes['${x.id}']=this.value;save()">${esc(S.notes[x.id]||"")}</textarea>
+ <div class="row" style="margin:6px 0 8px"><b>ลิงก์หลักฐาน</b><input style="flex:1;min-width:260px" value="${esc(S.evlink[x.id]||"")}" placeholder="วางลิงก์โฟลเดอร์/ไฟล์ Google Drive ของตัวชี้วัดนี้" onchange="S.evlink['${x.id}']=this.value.trim();save();render()">
+ <a class="btn ghost sm" style="text-decoration:none" target="_blank" rel="noopener" href="${esc(safeUrl(S.evlink[x.id])||evRoot())}">📁 ${safeUrl(S.evlink[x.id])?"เปิดหลักฐาน":"เปิดแฟ้มหลัก"}</a>
+ <span class="muted">โฟลเดอร์แนะนำ: <b>${evFolderName(x.id)}</b></span></div>
+ <textarea placeholder="บันทึกเพิ่มเติม (สิ่งที่ขาด ชื่อไฟล์ ผู้ส่ง)" onchange="S.notes['${x.id}']=this.value;save()">${esc(S.notes[x.id]||"")}</textarea>
  ${acts.length?`<div style="margin-top:8px"><b>กิจกรรมแนะนำ</b>${acts.map(([a,i])=>`<div class="row" style="margin:4px 0"><span style="flex:1">${a.bio?"🧬 ":""}${esc(a.t)}</span>${inPlan(i)?`<span class="badge">อยู่ในแผน</span>`:`<button class="btn ghost sm" onclick="addPlan(${i});render()">เพิ่มในแผน</button>`}</div>`).join("")}</div>`:""}
  </div></div>`;
 }
@@ -410,9 +424,9 @@ function gaps(){
 function wf(){
  const tb=(rows)=>`<table><thead><tr><th>ข้อมูล</th><th>หน่วย</th><th>แหล่งข้อมูล / หลักฐาน</th><th>ความถี่</th><th>ตัวชี้วัด</th></tr></thead><tbody>${rows.map(r=>`<tr>${r.map((c,i)=>i===4?`<td>${c.split(",").map(n=>{const k=n.trim().split(" ")[0];return CRIT.find(x=>x.id===k)?`<span class="pill" onclick="go('crit','${k}')">${esc(n.trim())}</span>`:esc(n)}).join("")}</td>`:`<td>${esc(c)}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
  return `<div class="card"><h2>Workflow เก็บข้อมูลแยกตามกลุ่มงาน</h2>
- <ol><li><b>เตรียม (สัปดาห์ 1–2)</b> — แต่งตั้งผู้รับผิดชอบข้อมูลฝ่ายธุรการ 1–2 คน และ Lab Champion ห้องละ 1 คน ผู้ประสานงานกำหนดห้องในขอบเขต ตั้งโฟลเดอร์หลักฐานแยกหมวด 1–6</li>
+ <ol><li><b>เตรียม (สัปดาห์ 1–2)</b> — แต่งตั้งผู้รับผิดชอบข้อมูลฝ่ายธุรการ 1–2 คน และ Lab Champion ห้องละ 1 คน ผู้ประสานงานกำหนดห้องในขอบเขต ตั้งโฟลเดอร์หลักฐานแยกหมวด 1–6 ใน <a href="${esc(evRoot())}" target="_blank" rel="noopener">แฟ้มหลักฐานกลาง (Google Drive)</a></li>
  <li><b>ข้อมูลฐาน (เดือนแรก)</b> — กรอกทะเบียนครั้งเดียว ขอบิลไฟ/น้ำย้อนหลัง 24 เดือน ผู้ประสานงานคำนวณ CF ปีฐาน</li>
- <li><b>ทุกเดือน</b> — ส่งข้อมูลพร้อมหลักฐานภายในวันที่ 5 ของเดือนถัดไป ผู้ประสานงานกรอกในแท็บคาร์บอนฟุตพริ้นท์และตามส่วนที่ขาดภายในวันที่ 10</li>
+ <li><b>ทุกเดือน</b> — อัปโหลดหลักฐานลงแฟ้มหลักฐานกลาง และส่งข้อมูลภายในวันที่ 5 ของเดือนถัดไป ผู้ประสานงานกรอกในแท็บคาร์บอนฟุตพริ้นท์และตามส่วนที่ขาดภายในวันที่ 10</li>
  <li><b>ทุกไตรมาส / ปี</b> — ตรวจสภาพแวดล้อมและความปลอดภัย สรุปให้หัวหน้าภาค และประชุมทบทวนฝ่ายบริหารปีละครั้ง (1.7)</li></ol></div>
  <div class="card" style="margin-top:14px"><h3>ฝ่ายธุรการ — ข้อมูลจากเอกสาร บิล ระบบพัสดุ/การเงิน</h3><div style="overflow:auto">${tb(WF.admin)}</div></div>
  <div class="card" style="margin-top:14px"><h3>ฝ่ายห้องปฏิบัติการ — ข้อมูลที่วัด/นับที่หน้างาน</h3><div style="overflow:auto">${tb(WF.lab)}</div>
@@ -424,6 +438,8 @@ function setv(){
  <div class="row" style="margin:6px 0"><span style="min-width:170px">จำนวนผู้ใช้พื้นที่ (คน)</span><input type="number" value="${S.cfg.people}" onchange="S.cfg.people=this.value;save()"></div>
  <div class="row" style="margin:6px 0"><span style="min-width:170px">พื้นที่ในขอบเขต (ตร.ม.)</span><input type="number" value="${S.cfg.area}" onchange="S.cfg.area=this.value;save()"></div>
  <div class="row" style="margin:6px 0"><span style="min-width:170px">เป้าลด CF ต่อปี (%)</span><input type="number" value="${S.cfg.target}" onchange="S.cfg.target=this.value;save()"></div>
+ <h3 style="margin-top:14px">แฟ้มหลักฐาน (Google Drive)</h3>
+ <div class="row" style="margin:6px 0"><input style="flex:1;min-width:280px" value="${esc(S.cfg.evRoot||EV_ROOT_DEFAULT)}" onchange="S.cfg.evRoot=this.value.trim();save();nav()"><button class="btn ghost sm" onclick="S.cfg.evRoot=EV_ROOT_DEFAULT;save();render();nav()">ใช้ค่าเริ่มต้น</button></div>
  <h3 style="margin-top:14px">เกณฑ์ระดับรางวัล (% คะแนนรวม)</h3>
  <div class="row">ทอง ≥ <input type="number" style="width:70px" value="${t[0]}" onchange="S.cfg.th[0]=+this.value;save()"> เงิน ≥ <input type="number" style="width:70px" value="${t[1]}" onchange="S.cfg.th[1]=+this.value;save()"> ทองแดง ≥ <input type="number" style="width:70px" value="${t[2]}" onchange="S.cfg.th[2]=+this.value;save()"></div>
  <p class="muted">ค่าตั้งต้นเป็นค่าที่ใช้กันทั่วไป ต้องตรวจกับประกาศของกรมการเปลี่ยนแปลงสภาพภูมิอากาศและสิ่งแวดล้อมในปีที่ยื่น</p></div>
@@ -439,7 +455,7 @@ let resetArm=0;
 function confirmReset(){if(Date.now()-resetArm<4000){S=blank();save();return true}resetArm=Date.now();alertBox("กด “ล้างข้อมูลทั้งหมด” อีกครั้งภายใน 4 วินาทีเพื่อยืนยัน");return false}
 function alertBox(m){let d=document.getElementById("toast");if(!d){d=document.createElement("div");d.id="toast";d.style.cssText="position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1d2a24;color:#fff;padding:10px 16px;border-radius:10px;font-size:14px;z-index:9";document.body.appendChild(d)}d.textContent=m;d.style.display="block";clearTimeout(d._t);d._t=setTimeout(()=>d.style.display="none",3500)}
 function imp(f){if(!f)return;const r=new FileReader();r.onload=()=>{try{S=Object.assign(blank(),JSON.parse(r.result));save();render();alertBox("นำเข้าข้อมูลแล้ว")}catch(e){alertBox("ไฟล์ไม่ถูกต้อง")}};r.readAsText(f)}
-function scoreCSV(){const r=[["ตัวชี้วัด","หมวด","ประเด็น","ชื่อ","ข้อที่ติ๊ก","คะแนน","หลักฐาน","ผู้รับผิดชอบ","บันทึก"]];CRIT.forEach(x=>{const ck=S.checks[x.id]||[];r.push([x.id,catOf(x.id),issueOf(x.id),x.t,ck.filter(Boolean).length+"/"+x.items.length,S.scores[x.id]??"",{none:"ยังไม่มี",partial:"บางส่วน",ready:"พร้อม"}[S.evid[x.id]||"none"],S.owner[x.id]||"",S.notes[x.id]||""])});dl("BioGreenOffice_assessment.csv","﻿"+r.map(x=>x.map(csvq).join(",")).join("\n"),"text/csv")}
+function scoreCSV(){const r=[["ตัวชี้วัด","หมวด","ประเด็น","ชื่อ","ข้อที่ติ๊ก","คะแนน","หลักฐาน","ลิงก์หลักฐาน","ผู้รับผิดชอบ","บันทึก"]];CRIT.forEach(x=>{const ck=S.checks[x.id]||[];r.push([x.id,catOf(x.id),issueOf(x.id),x.t,ck.filter(Boolean).length+"/"+x.items.length,S.scores[x.id]??"",{none:"ยังไม่มี",partial:"บางส่วน",ready:"พร้อม"}[S.evid[x.id]||"none"],S.evlink[x.id]||"",S.owner[x.id]||"",S.notes[x.id]||""])});dl("BioGreenOffice_assessment.csv","﻿"+r.map(x=>x.map(csvq).join(",")).join("\n"),"text/csv")}
 
 function render(){const f={dash,crit,acts,plan,cf,gaps,wf,set:setv}[tab];$("#app").innerHTML=f()}
 window.addEventListener("hashchange",()=>{const t=location.hash.slice(1);if(t!==tab&&TABS.find(x=>x[0]===t)){tab=t;nav();render()}});
